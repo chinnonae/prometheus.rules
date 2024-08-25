@@ -18,5 +18,10 @@ groups:
     rules:
       - alert: TraefikCertificateExpiring
         expr: traefik_tls_certs_not_after - time() < threshold:traefik_cert_expiring
+        annotations:
+          summary: Certificate for {{ .Labels.cn }} is expiring in
+            {{ with printf `threshold:traefik_cert_expiring` | query }}
+            {{ . | first | value | humanizeDuration }}
+            {{ end }}
         labels:
           severity: critical
