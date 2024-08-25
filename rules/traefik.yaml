@@ -10,10 +10,16 @@ groups:
         expr: sum(rate(traefik_service_request_duration_seconds_bucket[2m])) by (le, method, service)
       - record: service_method_50th:traefik_service_request_duration_seconds_bucket
         expr: histogram_quantile(0.50, service_method_le:traefik_service_request_duration_seconds_bucket:rate2m)
+        labels:
+          percentile: 50th
       - record: service_method_95th:traefik_service_request_duration_seconds_bucket
         expr: histogram_quantile(0.95, service_method_le:traefik_service_request_duration_seconds_bucket:rate2m)
+        labels:
+          percentile: 95th
       - record: service_method_99th:traefik_service_request_duration_seconds_bucket
         expr: histogram_quantile(0.99, service_method_le:traefik_service_request_duration_seconds_bucket:rate2m)
+        labels:
+          percentile: 99th
   - name: traefik.alerts
     rules:
       - alert: TraefikCertificateExpiring
