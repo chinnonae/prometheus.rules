@@ -1,0 +1,12 @@
+groups:
+  - name: traefik.threshold
+    rules:
+      - record: threshold:traefik_cert_expiring
+        # 25 days in seconds as it should be renew within 30 days
+        expr: (25 * 24 * 60 * 60)
+  - name: traefik.rules
+    rules: []
+  - name: traefik.alerts
+    rules:
+      - alert: TraefikCertificateExpiring
+        expr: traefik_tls_certs_not_after - time() < threshold:traefik_cert_expiring
