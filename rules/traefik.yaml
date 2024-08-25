@@ -5,7 +5,15 @@ groups:
         # 25 days in seconds as it should be renew within 30 days
         expr: (25 * 24 * 60 * 60)
   - name: traefik.rules
-    rules: []
+    rules:
+      - record: service_method_le:traefik_service_request_duration_seconds_bucket:rate2m
+        expr: sum(rate(traefik_service_request_duration_seconds_bucket[2m])) by (le, method, service)
+      - record: 50th_service_method:traefik_service_request_duration_seconds_bucket
+        expr: histogram_quantile(0.50, service_method_le:traefik_service_request_duration_seconds_bucket:rate2m)
+      - record: 95th_service_method:traefik_service_request_duration_seconds_bucket
+        expr: histogram_quantile(0.95, service_method_le:traefik_service_request_duration_seconds_bucket:rate2m)
+      - record: 99th_service_method:traefik_service_request_duration_seconds_bucket
+        expr: histogram_quantile(0.99, service_method_le:traefik_service_request_duration_seconds_bucket:rate2m)
   - name: traefik.alerts
     rules:
       - alert: TraefikCertificateExpiring
