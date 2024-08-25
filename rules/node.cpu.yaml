@@ -1,0 +1,79 @@
+groups:
+  - name: node.cpu.thresholds
+    rules:
+      - record: threshold:node_cpu_utilization
+        expr: 0.1
+        labels:
+          mode: idle
+      - record: threshold:node_cpu_utilization
+        expr: 0.1
+        labels:
+          mode: iowait
+      - record: threshold:node_cpu_utilization
+        expr: 0.1
+        labels:
+          mode: steal
+      - record: threshold:node_load1
+        expr: 10
+        labels:
+          severity: "warning"
+      - record: threshold:node_load1
+        expr: 20
+        labels:
+          severity: "critical"
+  - name: node.cpu.rules
+    rules:
+      - record: record:node_cpu_utilization
+        expr: avg(rate(node_cpu_seconds_total[2m])) without (cpu)
+  - name: node.cpu.alerts
+    rules:
+      - alert: CPUIdleTimeTooLow
+        expr: |
+          record:node_cpu_utilization{mode="idle"} < on(mode) group_right(instance) threshold:node_cpu_utilization{instance="",mode="idle"} unless on(instance) threshold:node_cpu_utilization{mode="idle"}
+          or
+          record:node_cpu_utilization{mode="idle"} < on(instance, mode) threshold:node_cpu_utilization{mode="idle"}
+        annotations:
+          summary:
+            Idle time <
+            {{ with printf `threshold:node_cpu_utilization{instance="%s",mode="idle"} or threshold:node_cpu_utilization{mode="idle"}` .Labels.instance | query }}
+            {{ . | first | value | humanizePercentage }}
+            {{ end }}
+        labels:
+          severity: critical
+      - alert: CPUIOWaitTimeTooHigh
+        expr: |
+          record:node_cpu_utilization{mode="iowait"} > on(mode) group_right(instance) threshold:node_cpu_utilization{instance="",mode="iowait"} unless on(instance) threshold:node_cpu_utilization{mode="iowait"}
+          or
+          record:node_cpu_utilization{mode="iowait"} > on(instance, mode) threshold:node_cpu_utilization{mode="iowait"} 
+        annotations:
+          summary:
+            IO wait time >
+            {{ with printf `threshold:node_cpu_utilization{instance="%s",mode="iowait"} or threshold:node_cpu_utilization{mode="iowait"}` .Labels.instance | query }}
+            {{ . | first | value | humanizePercentage }}
+            {{ end }}
+        labels:
+          severity: critical
+      - alert: CPUStealTimeTooHigh
+        expr: |
+          record:node_cpu_utilization{mode="steal"} > on(mode) group_right(instance) threshold:node_cpu_utilization{instance="",mode="steal"} unless on(instance) threshold:node_cpu_utilization{mode="steal"}
+          or
+          record:node_cpu_utilization{mode="steal"} > on(instance, mode) threshold:node_cpu_utilization{mode="steal"}
+        annotations:
+          summary:
+            Steal time >
+            {{ with printf `threshold:node_cpu_utilization{instance="%s",mode="steal"} or threshold:node_cpu_utilization{instance="",mode="steal"}` .Labels.instance | query }}
+            {{ . | first | value | humanizePercentage }}
+            {{ end }}
+        labels:
+          severity: critical
+      - alert: LoadAverage1TooHigh
+        expr: |
+          node_load1 > on() group_right(instance) threshold:node_load1{instance=""} unless on (instance, severity) threshold:node_load1
+          or
+          node_load1 > on (instance) group_right() threshold:node_load1
+        annotations:
+          summary:
+            Load1 >
+            {{ with printf `threshold:node_load1{instance="%s", severity="%s"}` .Labels.instance .Labels.severity | query }}
+            {{ . | first | value }}
+            {{ end }}

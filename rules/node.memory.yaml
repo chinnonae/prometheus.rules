@@ -1,0 +1,23 @@
+groups:
+  - name: node.memory.thresholds
+    rules:
+      - record: threshold:node_memory_utilization
+        expr: 0.8
+  - name: node.memory.rules
+    rules:
+      - record: record:node_memory_utilization
+        expr: 1 - ((node_memory_Buffers_bytes + node_memory_Cached_bytes + node_memory_MemFree_bytes) / node_memory_MemTotal_bytes)
+  - name: node.memory.alerts
+    rules:
+      - alert: MemoryUtilizationTooHigh
+        expr: |
+          record:node_memory_utilization > on() group_right(instance) threshold:node_memory_utilization{instance=""} unless on(instance) threshold:node_memory_utilization
+          or
+          record:node_memory_utilization > on(instance) threshold:node_memory_utilization
+        annotations:
+          summary: Memory Utilization >
+            {{ with printf `threshold:node_memory_utilization{instance="%s"} or threshold:node_memory_utilization{instance=""}` .Labels.instance | query }}
+            {{ . | first | value | humanizePercentage }}
+            {{ end }}
+        labels:
+          severity: critical
